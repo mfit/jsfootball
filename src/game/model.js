@@ -1,6 +1,8 @@
-var glmatrix = require('gl-matrix');
-var vec3 = glmatrix.vec3;
-var _ = require('lodash');
+var glmatrix = require('gl-matrix'),
+  vec3 = glmatrix.vec3,
+  _ = require('lodash'),
+  physics = require('./physics'),
+  geo = require('./geo');
 
 // debug
 Phaser.glmatrix = glmatrix;
@@ -10,7 +12,10 @@ var vzero = vec3.create(),
   radfact = Math.PI/180
 
 // Distance to all in which player can kick
-var playerKickMaxDistance = 25;
+var playerKickMaxDistance = 30;
+var baseWalkAdder = 0.2;
+var baseWalkAdderBackwards = 0.1;
+var ballMass = 0.05;
 
 // something about the match ( score , time , etc ? )
 function Match(wm) {
@@ -44,8 +49,10 @@ function MatchSituation(wm) {
 function WorldModel() {
   this.ball = new Ball();
   this.players = [];
-
   this.events;
+
+  this.pitch = new Pitch();
+  this.goal = new Goal();
 
   this.players.push(new Player(this, 1, 0));
   this.players.push(new Player(this, 2, 0));
@@ -53,8 +60,6 @@ function WorldModel() {
   this.players.push(new Player(this, 4, 1));
 
   var vhelp = vec3.create();
-
-  this.events =
 
   this.kickBallVelFromDiff = function (pos) {
     var mousepos = vec3.fromValues(pos.x, pos.y, 0);
@@ -86,24 +91,11 @@ function WorldModel() {
   };
 
 }
-
-// Physics body
-function Body() {
-  this.p = vec3.create();
-  this.v = vec3.create();
-  this.heading = 0;
-  this.mass = 1;
-  this.setPos = function(x, y) {
-    vec3.set(this.p, x, y, 0);
-  }
-}
-
-
 // Player model
 function Player(wm, id, team) {
   this.id = id;
   this.team = team;
-  this.body = new Body();
+  this.body = new physics.Body();
   this.wm = wm;
 
   var vhelp = vec3.create();
@@ -119,14 +111,14 @@ function Player(wm, id, team) {
   this.walk = function() {
     vec3.set(vhelp, 0, -1, 0);
     vec3.rotateZ(vhelp, vhelp, vzero, this.body.heading * radfact);
-    vec3.scale(vhelp, vhelp, .2);
+    vec3.scale(vhelp, vhelp, baseWalkAdder);
     vec3.add(this.body.v, this.body.v, vhelp);
   }
 
   this.walkBackwards = function() {
     vec3.set(vhelp, 0, 1, 0);
     vec3.rotateZ(vhelp, vhelp, vzero, this.body.heading * radfact);
-    vec3.scale(vhelp, vhelp, .1);
+    vec3.scale(vhelp, vhelp, baseWalkAdderBackwards);
     vec3.add(this.body.v, this.body.v, vhelp);
   }
 
@@ -142,11 +134,23 @@ function Player(wm, id, team) {
 
 // the ball
 function Ball() {
-  this.body = new Body();
-  this.body.mass = 0.05;
+  this.body = new physics.Body();
+  this.body.mass = ballMass;
   this.setPos = function(x, y) {
     this.body.setPos(x, y);
   }
+}
+
+function Pitch() {
+  this.body = new physics.Body();
+  this.body.shape = geo.getRect(10, 10, 600, 10, 600, 500, 10, 500);
+  this.body.movable = false;
+}
+
+function Goal() {
+  this.body = new physics.Body();
+  this.body.shape = geo.getRect(100, 20, 200, 20, 200, 22, 100, 22);
+  this.body.movable = false;
 }
 
 module.exports = {

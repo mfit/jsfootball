@@ -18,8 +18,26 @@ Boot.prototype.create = function () {
     this.game.scale.forceOrientation(true);
     this.game.scale.pageAlignHorizontally = true;
     this.game.scale.setScreenSize(true);
+
+    //
+    // Fullscreen settings
+    //
+
+    // Stretch to fill
+    this.game.scale.fullScreenScaleMode = Phaser.ScaleManager.EXACT_FIT;
+
+    // Keep original size
+    // game.scale.fullScreenScaleMode = Phaser.ScaleManager.NO_SCALE;
+
+    // Maintain aspect ratio
+    // game.scale.fullScreenScaleMode = Phaser.ScaleManager.SHOW_ALL;
+
+
   }
   this.game.state.start('preloader');
+
+
+
 };
 
 module.exports = Boot;

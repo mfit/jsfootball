@@ -6,5 +6,17 @@ game.state.add('menu', require('./menu'));
 game.state.add('game', require('./game'));
 game.state.start('boot');
 
+game.physicsRunning = true;
+game.physicsStep = false;
+
+game.gofull = function gofull() {
+  if (!this.scale.isFullScreen) {
+      game.scale.startFullScreen(false);
+  }
+  // else {
+  //     game.scale.stopFullScreen();
+
+  // }
+}
 
 

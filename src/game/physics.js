@@ -7,16 +7,25 @@ var vzero = vec3.create(),
 
 
 function Physics() {
+
   this.objects = [];
   this.collisions = [];
 
   var debugEdges = [];
 
   var vzero = vec3.create(),
-    radfact = Math.PI/180;
+    radfact = Math.PI/180,
+    helperv1 = vec3.create()
+    helperv2 = vec3.create();
 
   this.add = function(obj) {
     this.objects.push(obj);
+  }
+
+  function debugShape(shape) {
+    for(var i = 0; i < shape.edges.length; i++) {
+      debugEdge(shape.edges[i].v1, shape.edges[i].v2);
+    }
   }
 
   function debugEdge(p1, p2) {
@@ -31,16 +40,37 @@ function Physics() {
     return debugEdges;
   }
 
+  // Determine what happens when two objects o and p collide
+  this.collide = function collide(o, p) {
+    // Note that the two collided
+    this.collisions.push([o, p]);
+
+    // Distribute force of impact on the two bodies
+    var massv = p.mass / (o.mass + p.mass);
+    vec3.scale(helperv1, o.v, -massv);
+    vec3.scale(helperv2, o.v, 1-massv);
+
+    if ( o.movable ) {
+      vec3.copy(o.v, helperv1);
+      // vec3.add(o.v, o.v, helperv1);
+    }
+
+    if (p.movable) {
+      vec3.add(p.v, p.v, helperv2);
+    }
+  }
+
   this.collisionsTest = function() {
     this.collisions = [];
-    var o, p,
-      forcev1 = vec3.create(),
-      forcev2 = vec3.create();
+    var o, p, currentShape, currentEdge;
 
     for(var i = 0; i < this.objects.length; i++) {
       var movement = vec3.create();
       o = this.objects[i];
       vec3.add(movement, o.p, o.v);
+
+      // currentShape = o.getTransformedShape();
+      // debugShape(currentShape);
 
       for(var j = 0; j < this.objects.length; j++) {
         if (i == j) {
@@ -48,33 +78,20 @@ function Physics() {
         }
         p = this.objects[j];
 
-        // Make an edge that is p's flat "body"
-        var e1 = vec3.fromValues(0, 20, 0),
-          e2 = vec3.fromValues(0, -20, 0);
-        vec3.rotateZ(e1, e1, vzero, (p.heading+90) * radfact);
-        vec3.rotateZ(e2, e2, vzero, (p.heading+90) * radfact);
-        vec3.add(e1, e1, p.p);
-        vec3.add(e2, e2, p.p);
-
-        debugEdge(e1, e2);
+        currentShape = p.getTransformedShape();
         debugEdge(o.p, movement);
-        if (geo.getLineIntersection(
-            e1[0], e1[1],
-            e2[0], e2[1],
-            o.p[0], o.p[1],
-            movement[0], movement[1]
-         )) {
+        for (var k = 0; k < currentShape.edges.length; k++) {
+          currentEdge = currentShape.edges[k];
+          debugEdge(currentEdge.v1, currentEdge.v2);
 
-          // Note that the two collided
-          this.collisions.push([o, p]);
-
-          // Distribute force of impact on the two bodies
-          var massv = p.mass / (o.mass + p.mass);
-          vec3.scale(forcev1, o.v, -massv);
-          vec3.scale(forcev2, o.v, 1-massv);
-          vec3.copy(o.v, forcev1);
-          // vec3.add(o.v, o.v, forcev1);
-          vec3.add(p.v, p.v, forcev2);
+          if (geo.getLineIntersection(
+              currentEdge.v1[0], currentEdge.v1[1],
+              currentEdge.v2[0], currentEdge.v2[1],
+              o.p[0], o.p[1],
+              movement[0], movement[1]
+           )) {
+            this.collide(o, p);
+          }
         }
       }
     }
@@ -91,6 +108,8 @@ function Physics() {
   this.update = function updatePhysics(t) {
     clearDebugEdges();
 
+    this._playAroundWithStuff();
+
     this.collisionsTest();
 
     for(var i = 0; i < this.objects.length; i++) {
@@ -99,15 +118,45 @@ function Physics() {
       // Movement
       vec3.add(o.p, o.p, o.v);
 
-      // Friction
-      vec3.scale(o.v, o.v, 0.92);
+      // Add friction by scaling down the velocity vector
+      var friction = 0.08;
+      vec3.scale(o.v, o.v, 1 - friction);
 
     }
   }
 
+  this._playAroundWithStuff = function() {
+    // ...
+  }
+
 }
 
+// Physics body
+function Body() {
+  this.p = vec3.create();
+  this.v = vec3.create();
+  this.heading = 0;
+  this.mass = 1;
+  this.movable = true;
+  this.setPos = function(x, y) {
+    vec3.set(this.p, x, y, 0);
+  }
+
+  this.shape = new geo.Shape([
+    new geo.Edge().fromPoints2D(this.v[0] - 20, this.v[1] - 20, this.v[0] + 20, this.v[1] - 20),
+    new geo.Edge().fromPoints2D(this.v[0] + 20, this.v[1] - 20, this.v[0] + 20, this.v[1] + 20),
+    new geo.Edge().fromPoints2D(this.v[0] + 20, this.v[1] + 20, this.v[0] - 20, this.v[1] + 20),
+    new geo.Edge().fromPoints2D(this.v[0] - 20, this.v[1] + 20, this.v[0] - 20, this.v[1] - 20),
+  ]);
+
+  this.getTransformedShape = function() {
+    return this.shape.reset()
+      .move(this.p)
+      .rotate2D(this.heading * radfact, this.p);
+  }
+}
 
 module.exports = {
-  Physics: Physics
+  Physics: Physics,
+  Body: Body,
 }

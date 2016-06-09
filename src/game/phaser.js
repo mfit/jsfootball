@@ -69,7 +69,49 @@ function KeyboardControl(kb) {
   }
 }
 
+function PhaserGameKeyboardControl(kb, game) {
+  this.kb = kb;
+  this.game = game;
+  var self = this;
+
+  this.keymap = {
+    fullscreen: Phaser.Keyboard.F2,
+    sound: Phaser.Keyboard.F3,
+    physics: Phaser.Keyboard.F4,
+    physicsStep: Phaser.Keyboard.P,
+    menu: Phaser.Keyboard.F10,
+  }
+
+  this.setKeymap = function() {
+  }
+
+  this.doControl = function(game) {
+    if (this.kb.isDown(this.keymap.fullscreen)) {
+      game.gofull();
+    }
+
+    if (this.kb.isDown(this.keymap.sound)) {
+      game.sound.mute = !game.sound.mute;
+    }
+
+    if (this.kb.isDown(this.keymap.physics)) {
+      game.physicsRunning = !game.physicsRunning;
+    }
+
+    if (this.kb.isDown(this.keymap.physicsStep)) {
+      game.physicsStep = true;
+    }
+  }
+
+  this.kb.onDownCallback = function() {
+    // console.log("Key down");
+    self.doControl(game);
+  }
+
+}
+
 module.exports = {
   PhaserLink: PhaserLink,
-  KeyboardControl: KeyboardControl
+  KeyboardControl: KeyboardControl,
+  PhaserGameKeyboardControl: PhaserGameKeyboardControl
 };
